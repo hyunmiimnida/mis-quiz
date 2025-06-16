@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>경영정보시스템 시험 대비 프로그램</title>
+    <title>경영정보시스템 AI 학습 플랫폼</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -24,6 +24,8 @@
         .prose ul { list-style-type: disc; padding-left: 1.5rem; }
         .prose li { margin-bottom: 0.5rem; }
         .prose strong { color: #1e40af; }
+        .ai-question-box { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800">
@@ -38,12 +40,12 @@
                     <div id="learning-mode-btn" class="mode-card bg-white p-10 rounded-xl shadow-lg cursor-pointer text-left">
                         <i class="fas fa-book-open text-4xl text-blue-500 mb-4"></i>
                         <h2 class="text-2xl font-bold text-slate-800">학습 모드</h2>
-                        <p class="mt-2 text-slate-500">핵심 개념을 체계적으로 학습합니다.</p>
+                        <p class="mt-2 text-slate-500">핵심 개념을 체계적으로 학습하고 AI 문제를 생성합니다.</p>
                     </div>
                     <div id="quiz-mode-btn" class="mode-card bg-white p-10 rounded-xl shadow-lg cursor-pointer text-left">
                         <i class="fas fa-pencil-alt text-4xl text-green-500 mb-4"></i>
                         <h2 class="text-2xl font-bold text-slate-800">문제풀이 모드</h2>
-                        <p class="mt-2 text-slate-500">AI로 문제를 생성하고 실전처럼 테스트합니다.</p>
+                        <p class="mt-2 text-slate-500">AI로 문제를 대량 추가하고 실전처럼 테스트합니다.</p>
                     </div>
                 </div>
                  <footer class="text-center py-4 mt-16">
@@ -95,7 +97,7 @@
                     <div id="ai-status" class="mb-4 text-slate-600 h-6"></div>
                     <div class="flex justify-center items-center gap-4">
                         <button id="add-ai-questions-btn" class="px-8 py-4 bg-blue-600 text-white rounded-lg font-bold text-xl hover:bg-blue-700 transition shadow-lg disabled:bg-blue-300" disabled>
-                            <i class="fas fa-magic-wand-sparkles mr-2"></i>AI로 문제 추가
+                            <i class="fas fa-magic-wand-sparkles mr-2"></i>AI로 문제 추가 (10개)
                         </button>
                         <button id="generate-quiz-btn" class="px-10 py-4 bg-indigo-600 text-white rounded-lg font-bold text-xl hover:bg-indigo-700 transition shadow-lg disabled:bg-indigo-300" disabled>
                             문제 출제
@@ -107,7 +109,7 @@
 
         <!-- Quiz View -->
         <div id="quiz-view" class="view">
-             <div class="container mx-auto p-4 sm:px-6 lg:p-8">
+            <div class="container mx-auto p-4 sm:px-6 lg:p-8">
                 <header class="flex justify-between items-center mb-6 pb-4 border-b border-slate-300">
                     <h1 id="quiz-title" class="text-3xl font-bold text-slate-900"></h1>
                     <button id="back-to-quiz-home" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-semibold hover:bg-slate-300 transition">챕터 선택</button>
@@ -406,485 +408,476 @@
         userAnswers: {}
     };
 
-    // --- All UI elements ---
-    const views = {
-        main: document.getElementById('main-view'),
-        learning: document.getElementById('learning-view'),
-        quizHome: document.getElementById('quiz-home-view'),
-        quiz: document.getElementById('quiz-view'),
-        results: document.getElementById('results-view'),
-        admin: document.getElementById('admin-view')
-    };
-
-    const learningContentContainer = document.getElementById('learning-content-container');
-    const chapterSelectionContainer = document.getElementById('chapter-selection');
-    const generateQuizBtn = document.getElementById('generate-quiz-btn');
-    const addAiQuestionsBtn = document.getElementById('add-ai-questions-btn');
-    const aiStatus = document.getElementById('ai-status');
-    const quizContainer = document.getElementById('quiz-container');
-    const resultsContainer = document.getElementById('results-container');
-    const dataEditor = document.getElementById('data-editor');
-    const quizTitle = document.getElementById('quiz-title');
-    const gradeButton = document.getElementById('grade-button');
-    const resultsSummary = document.getElementById('results-summary');
-    const modalLayer = document.getElementById('modal-layer');
-    const apiKeyModal = document.getElementById('api-key-modal');
-    const apiKeyInput = document.getElementById('api-key-input');
-    const apiKeyError = document.getElementById('api-key-error');
-
     function showView(viewId) {
-        Object.values(views).forEach(v => {
-            if(v) v.classList.remove('active');
-        });
-        if(views[viewId]) {
-            views[viewId].classList.add('active');
-        }
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById(`${viewId}-view`).classList.add('active');
         state.currentView = viewId;
         window.scrollTo(0, 0);
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const views = {
+            main: document.getElementById('main-view'),
+            learning: document.getElementById('learning-view'),
+            quizHome: document.getElementById('quiz-home-view'),
+            quiz: document.getElementById('quiz-view'),
+            results: document.getElementById('results-view'),
+            admin: document.getElementById('admin-view')
+        };
     
-    function setupLearningMode() {
-        let contentHTML = '';
-        for (const chapterKey in learningContent) {
-            const chapter = learningContent[chapterKey];
-            contentHTML += `
-                <section id="learn-${chapterKey.toLowerCase().replace(/ /g, '-')}" class="mb-12">
-                    <h2 class="text-3xl font-bold mb-6 pb-2 border-b">${chapter.title}</h2>
-                    <div>${chapter.content}</div>
-                </section>
-            `;
-        }
-        learningContentContainer.innerHTML = contentHTML;
-        setupLearningNav();
-    }
-
-    function setupLearningNav() {
-        const navLinks = document.querySelectorAll('.learning-nav a');
-        const sections = document.querySelectorAll('#learning-content-container section');
-
-        if(sections.length === 0) return;
-
-        const observer = new IntersectionObserver((entries) => {
-            let activeSectionId = null;
-            for(const entry of entries) {
-                if (entry.isIntersecting) {
-                    activeSectionId = entry.target.id;
-                    break;
-                }
-            }
-            
-            navLinks.forEach(link => {
-                const linkHref = link.getAttribute('href');
-                link.classList.toggle('active', linkHref === `#${activeSectionId}`);
-            });
-        }, { rootMargin: "-40% 0px -60% 0px", threshold: 0.1 });
-
-        sections.forEach(section => observer.observe(section));
-    }
-    
-    function handleAiQuestionAddition() {
-        if (sessionApiKey) {
-            generateAiQuizQuestions(sessionApiKey);
-        } else {
-            modalLayer.classList.remove('hidden');
-            apiKeyModal.classList.remove('hidden');
-            apiKeyInput.focus();
-        }
-    }
-
-    async function generateAiQuizQuestions(apiKey) {
-        if (state.selectedChapters.length === 0) return;
-
-        addAiQuestionsBtn.disabled = true;
-        generateQuizBtn.disabled = true;
-        aiStatus.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i>AI가 선택된 챕터의 문제들을 생성 중입니다... (챕터당 1~2분 소요)`;
-
-        let newQuestionsCount = 0;
-        let highestId = questionData.reduce((maxId, q) => Math.max(q.id, maxId), 0);
-
-        try {
-            for (const chapterKey of state.selectedChapters) {
-                aiStatus.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i><b>${chapterKey}</b> 챕터 문제 생성 중...`;
-                const concepts = learningContent[chapterKey].content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-                const prompt = `경영정보시스템의 다음 핵심 개념들을 바탕으로, 실제 기업 사례를 적용하거나 개념을 응용하는 문제 10개를 생성해줘. 문제는 기존 문제와 겹치지 않게, 그리고 객관식, 주관식, 서술형이 적절히 섞이도록 해줘.
-
-                핵심 개념: "${concepts}"
-
-                출력 형식은 반드시 다음 JSON 구조의 배열(array) 형태여야 해:
-                [
-                  { "type": "객관식", "chapter": "${chapterKey}", "text": "...", "options": ["...", "...", "...", "..."], "answer": 0~4, "explanation": "..." },
-                  { "type": "주관식", "chapter": "${chapterKey}", "text": "...하는 것은 ( )이다.", "answer": ["..."] },
-                  { "type": "서술형", "chapter": "Chapter 07", "text": "...", "answer": "..." }
-                ]
-                `;
-
-                let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-                const payload = { contents: chatHistory };
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-                
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    const errorBody = await response.text();
-                    throw new Error(`[${chapterKey}] API 요청 실패: ${response.status}. ${errorBody}`);
-                }
-
-                const result = await response.json();
-
-                if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0]) {
-                    const rawText = result.candidates[0].content.parts[0].text;
-                    const cleanedText = rawText.replace(/^```json\s*|```\s*$/g, '').trim();
-                    const newQuestions = JSON.parse(cleanedText);
-
-                    if (Array.isArray(newQuestions)) {
-                        newQuestions.forEach(q => {
-                            highestId++;
-                            q.id = highestId;
-                            q.chapter = chapterKey; // Ensure chapter is correct
-                            questionData.push(q);
-                        });
-                        newQuestionsCount += newQuestions.length;
-                    }
-                } else {
-                    throw new Error(`[${chapterKey}] AI로부터 유효한 응답을 받지 못했습니다.`);
-                }
-            }
-            aiStatus.innerHTML = `<span class="text-green-600 font-bold"><i class="fas fa-check-circle mr-2"></i>총 ${newQuestionsCount}개의 AI 문제가 성공적으로 추가되었습니다!</span>`;
-            createChapterCards(); // Refresh chapter cards with new counts
-        } catch (error) {
-            console.error("AI Question Generation Error:", error);
-            aiStatus.innerHTML = `<span class="text-red-600 font-bold"><i class="fas fa-exclamation-triangle mr-2"></i>문제 생성 중 오류가 발생했습니다: ${error.message}</span>`;
-        } finally {
-            addAiQuestionsBtn.disabled = false;
-            generateQuizBtn.disabled = state.selectedChapters.length === 0;
-        }
-    }
-
-
-    function toggleChapterSelection(chapter, cardElement) {
-        const index = state.selectedChapters.indexOf(chapter);
-        if (index > -1) {
-            state.selectedChapters.splice(index, 1);
-            cardElement.classList.remove('selected');
-        } else {
-            state.selectedChapters.push(chapter);
-            cardElement.classList.add('selected');
-        }
-        const isDisabled = state.selectedChapters.length === 0;
-        generateQuizBtn.disabled = isDisabled;
-        addAiQuestionsBtn.disabled = isDisabled;
-    }
-
-    function createChapterCards() {
-        const chapters = [...new Set(questionData.map(q => q.chapter))].sort();
-        chapterSelectionContainer.innerHTML = '';
-        chapters.forEach((chapter) => {
-            const questionCount = questionData.filter(q => q.chapter === chapter).length;
-            const card = document.createElement('div');
-            card.className = `chapter-card p-6 rounded-lg text-slate-800 bg-white shadow-sm cursor-pointer`;
-            card.dataset.chapter = chapter;
-            card.innerHTML = `<h3 class="text-xl font-bold">${chapter.replace('Chapter 0', 'Chapter ')}</h3><p class="mt-2 text-slate-500">${questionCount} 문제</p>`;
-            card.addEventListener('click', () => toggleChapterSelection(chapter, card));
-            chapterSelectionContainer.appendChild(card);
-        });
-    }
-    
-    function startQuiz() {
-        if (state.selectedChapters.length === 0) return;
-        state.userAnswers = {};
-        const questions = questionData.filter(q => state.selectedChapters.includes(q.chapter));
-        state.currentQuizQuestions = questions.sort(() => Math.random() - 0.5);
-        const chapterNames = state.selectedChapters.map(c => c.replace('Chapter 0', '')).sort().join(', ');
-        quizTitle.textContent = `Chapter ${chapterNames} 종합 테스트`;
-        renderQuizQuestions();
-        showView('quiz');
-    }
-
-    function renderQuizQuestions() {
-        if (!document.getElementById('quiz-container')) {
-             document.getElementById('quiz-view').innerHTML = `
-                <div class="container mx-auto p-4 sm:px-6 lg:p-8">
-                    <header class="flex justify-between items-center mb-6 pb-4 border-b border-slate-300">
-                        <h1 id="quiz-title" class="text-3xl font-bold text-slate-900"></h1>
-                        <button id="back-to-quiz-home" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-semibold hover:bg-slate-300 transition">챕터 선택</button>
-                    </header>
-                    <div id="quiz-container" class="space-y-8"></div>
-                    <div class="mt-10 text-center">
-                        <button id="grade-button" class="px-8 py-3 bg-indigo-600 text-white rounded-lg font-bold text-lg hover:bg-indigo-700 transition shadow-lg">채점하기</button>
-                    </div>
-                </div>`;
-            document.getElementById('back-to-quiz-home').addEventListener('click', () => showView('quiz-home'));
-            document.getElementById('grade-button').addEventListener('click', gradeQuiz);
-        }
-
+        const learningContentContainer = document.getElementById('learning-content-container');
+        const chapterSelectionContainer = document.getElementById('chapter-selection');
+        const generateQuizBtn = document.getElementById('generate-quiz-btn');
+        const addAiQuestionsBtn = document.getElementById('add-ai-questions-btn');
+        const aiStatus = document.getElementById('ai-status');
         const quizContainer = document.getElementById('quiz-container');
-        quizContainer.innerHTML = '';
-        state.currentQuizQuestions.forEach((q, index) => {
-            const questionEl = document.createElement('div');
-            questionEl.className = 'bg-white p-6 rounded-lg shadow-sm';
-            questionEl.dataset.questionId = q.id;
-            let answerInputHTML = '';
-            if (q.type === '객관식') {
-                const optionsHTML = q.options.map((opt, optIndex) => `
-                    <label class="mcq-option block p-3 border rounded-lg cursor-pointer hover:bg-slate-100 has-[:checked]:bg-indigo-100 has-[:checked]:border-indigo-500">
-                        <input type="radio" name="q-${q.id}" value="${optIndex}" class="sr-only">
-                        <span class="font-medium">${optIndex + 1}.</span> ${opt.replace(/\*\*/g, '')}
-                    </label>`).join('');
-                answerInputHTML = `<div class="mt-4 space-y-2" onclick="event.target.closest('label')?.querySelector('input').click()">${optionsHTML}</div>`;
-            } else if (q.type === '주관식') {
-                answerInputHTML = `<input type="text" name="q-${q.id}" class="mt-4 w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="정답을 입력하세요...">`;
-            } else {
-                answerInputHTML = `<textarea name="q-${q.id}" rows="4" class="mt-4 w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="답안을 서술하세요..."></textarea>`;
-            }
-            questionEl.innerHTML = `<p class="text-sm font-bold text-indigo-600">문제 ${index + 1} (${q.type})</p><p class="mt-2 text-lg text-slate-800">${q.text.replace(/\*\*/g, '')}</p>${answerInputHTML}`;
-            quizContainer.appendChild(questionEl);
-        });
-    }
-
-    function gradeQuiz() {
-        let score = 0;
-        let gradableCount = 0;
-        state.currentQuizQuestions.forEach(q => {
-            let userAnswer;
-            if (q.type === '객관식') {
-                const selectedOption = document.querySelector(`input[name="q-${q.id}"]:checked`);
-                userAnswer = selectedOption ? parseInt(selectedOption.value) : -1;
-                state.userAnswers[q.id] = userAnswer;
-                if (userAnswer === q.answer) score++;
-                gradableCount++;
-            } else if (q.type === '주관식') {
-                const input = document.querySelector(`input[name="q-${q.id}"]`);
-                userAnswer = input.value.trim();
-                state.userAnswers[q.id] = userAnswer;
-                
-                let isCorrect = false;
-                if (Array.isArray(q.answer)) {
-                    const correctAnswers = q.answer.map(a => a.toLowerCase().trim().replace(/\s*\(.*\)\s*/, ''));
-                    if (correctAnswers.includes(userAnswer.toLowerCase())) {
-                        isCorrect = true;
-                    }
-                } else {
-                    if(userAnswer.toLowerCase() === q.answer.toLowerCase().trim()) isCorrect = true;
-                }
-
-                if(isCorrect) score++;
-                gradableCount++;
-
-            } else {
-                const textarea = document.querySelector(`textarea[name="q-${q.id}"]`);
-                state.userAnswers[q.id] = textarea.value;
-            }
-        });
-        displayResults(score, gradableCount);
-    }
-    
-    function displayResults(score, gradableCount) {
-        if (!document.getElementById('results-container')) {
-            document.getElementById('results-view').innerHTML = `
-            <div class="container mx-auto p-4 sm:px-6 lg:p-8">
-                <header class="text-center mb-10">
-                    <h1 class="text-4xl font-bold text-slate-900">채점 결과</h1>
-                    <p id="results-summary" class="mt-3 text-2xl font-semibold text-indigo-600"></p>
-                </header>
-                <div id="results-container" class="space-y-6"></div>
-                <div class="mt-10 text-center">
-                     <button id="restart-quiz" class="px-6 py-3 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition">다시 풀기</button>
-                     <button id="go-to-quiz-home" class="ml-4 px-6 py-3 bg-slate-200 text-slate-700 rounded-lg font-bold hover:bg-slate-300 transition">챕터 선택</button>
-                </div>
-            </div>`;
-            document.getElementById('restart-quiz').addEventListener('click', startQuiz);
-            document.getElementById('go-to-quiz-home').addEventListener('click', () => showView('quiz-home'));
-        }
-        
-        document.getElementById('results-summary').textContent = gradableCount > 0 ? `자동 채점 문제 ${gradableCount}개 중 ${score}개 정답!` : '채점할 문제가 없습니다.';
         const resultsContainer = document.getElementById('results-container');
-        resultsContainer.innerHTML = '';
-
-        state.currentQuizQuestions.forEach((q, index) => {
-            const userAnswer = state.userAnswers[q.id];
-            let resultClass = 'manual', feedbackHTML = '', resultIcon = `<span class="text-amber-500 font-bold">확인</span>`;
-            if (q.type === '객관식') {
-                const isCorrect = userAnswer === q.answer;
-                resultClass = isCorrect ? 'correct' : 'incorrect';
-                resultIcon = isCorrect ? `<span class="text-green-500 font-bold">정답</span>` : `<span class="text-red-500 font-bold">오답</span>`;
-                feedbackHTML = `<p class="text-sm mt-2"><span class="font-semibold">제출 답안:</span> ${userAnswer === -1 ? '미선택' : (userAnswer + 1) + '. ' + q.options[userAnswer]}</p><p class="text-sm"><span class="font-semibold">정답:</span> ${q.answer + 1}. ${q.options[q.answer]}</p>${q.explanation && !isCorrect ? `<p class="text-sm text-slate-500 mt-1"><b>해설:</b> ${q.explanation}</p>` : ''}`;
-            } else if (q.type === '주관식') {
-                let isCorrect = false;
-                const correctAnswerText = Array.isArray(q.answer) ? q.answer.join(' 또는 ') : q.answer;
-                if (Array.isArray(q.answer)) {
-                    if(q.answer.map(a => a.toLowerCase().trim().replace(/\s*\(.*\)\s*/, '')).includes(userAnswer.toLowerCase())) isCorrect = true;
-                } else {
-                    if(userAnswer.toLowerCase() === q.answer.toLowerCase().trim()) isCorrect = true;
-                }
-                resultClass = isCorrect ? 'correct' : 'incorrect';
-                resultIcon = isCorrect ? `<span class="text-green-500 font-bold">정답</span>` : `<span class="text-red-500 font-bold">오답</span>`;
-                feedbackHTML = `<p class="text-sm mt-2"><span class="font-semibold">제출 답안:</span> ${userAnswer || '미입력'}</p><p class="text-sm"><span class="font-semibold">정답:</span> ${correctAnswerText}</p>`;
-            } else {
-                 feedbackHTML = `<div class="mt-2 grid grid-cols-1 md:grid-cols-2 gap-4"><div><h4 class="font-semibold text-sm text-slate-600 mb-1">제출 답안</h4><p class="text-sm p-3 bg-slate-100 rounded-lg min-h-[60px]">${userAnswer || '미입력'}</p></div><div><h4 class="font-semibold text-sm text-slate-600 mb-1">모범 답안</h4><div class="text-sm p-3 bg-green-50 rounded-lg min-h-[60px]">${q.answer.replace(/\n/g, '<br>')}</div></div></div>`;
-            }
-            const resultEl = document.createElement('div');
-            resultEl.className = `result-card bg-white p-4 rounded-lg shadow-sm border-l-4 ${resultClass}`;
-            resultEl.innerHTML = `<div class="flex justify-between items-center"><p class="font-bold text-slate-700">문제 ${index + 1}. (${q.type})</p>${resultIcon}</div><p class="mt-2 text-slate-800">${q.text.replace(/\*\*/g, '')}</p><div class="mt-3 border-t pt-3">${feedbackHTML}</div>`;
-            resultsContainer.appendChild(resultEl);
-        });
-        showView('results');
-    }
-
-    function loadData() {
-        try {
-            const savedData = localStorage.getItem('misQuizData');
-            questionData = savedData ? JSON.parse(savedData) : initialQuestionData;
-        } catch (e) {
-            console.error("Error loading data from localStorage:", e);
-            questionData = initialQuestionData;
-        }
-    }
-    
-    function setupAdminMode() {
-        if (!document.getElementById('data-editor')) {
-             document.getElementById('admin-view').innerHTML = `
-             <div class="container mx-auto p-4 sm:px-6 lg:p-8">
-                <header class="text-center mb-8">
-                    <h1 class="text-4xl font-bold text-slate-900">관리자 모드</h1>
-                    <p class="mt-3 text-lg text-slate-600">문제 데이터를 직접 수정, 추가, 백업할 수 있습니다.</p>
-                </header>
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h2 class="text-xl font-bold mb-2">문제 데이터 (JSON 형식)</h2>
-                    <p class="text-sm text-slate-500 mb-4">아래 텍스트를 직접 수정하여 문제를 변경할 수 있습니다. 새로운 문제를 추가하려면 기존 문제의 형식을 복사하여 붙여넣고 내용을 수정하세요.</p>
-                    <textarea id="data-editor" class="w-full h-96 p-3 border border-slate-300 rounded-md font-mono text-sm"></textarea>
-                    <div class="flex flex-wrap gap-4 mt-4">
-                        <button id="save-data-btn" class="px-6 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition">저장하기</button>
-                        <button id="download-data-btn" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition">데이터 백업</button>
-                        <button onclick="document.getElementById('upload-data-input').click()" class="px-6 py-2 bg-orange-500 text-white rounded-lg font-bold hover:bg-orange-600 transition">데이터 복원</button>
-                        <input type="file" id="upload-data-input" class="hidden" accept=".json">
-                        <button id="exit-admin-btn" class="px-6 py-2 bg-slate-500 text-white rounded-lg font-bold hover:bg-slate-600 transition">나가기</button>
-                    </div>
-                    <p id="save-status" class="mt-4 text-green-600 font-semibold"></p>
-                </div>
-             </div>`;
-            document.getElementById('save-data-btn').addEventListener('click', saveData);
-            document.getElementById('exit-admin-btn').addEventListener('click', () => showView('main'));
-            document.getElementById('download-data-btn').addEventListener('click', downloadData);
-            document.getElementById('upload-data-input').addEventListener('change', uploadData);
-        }
-
-        const passwordModal = document.getElementById('password-modal');
-        const passwordInput = document.getElementById('password-input');
-        const passwordError = document.getElementById('password-error');
-        
-        document.getElementById('admin-mode-btn').addEventListener('click', () => {
-            passwordModal.classList.remove('hidden');
-            passwordInput.focus();
-        });
-    
-        document.getElementById('password-cancel').addEventListener('click', () => {
-            passwordModal.classList.add('hidden');
-            passwordInput.value = '';
-            passwordError.classList.add('hidden');
-        });
-    
-        document.getElementById('password-submit').addEventListener('click', () => {
-            if (passwordInput.value === ADMIN_PASSWORD) {
-                passwordModal.classList.add('hidden');
-                passwordInput.value = '';
-                passwordError.classList.add('hidden');
-                document.getElementById('data-editor').value = JSON.stringify(questionData, null, 2);
-                showView('admin');
-            } else {
-                passwordError.classList.remove('hidden');
-            }
-        });
-
-        function saveData() {
-             try {
-                const editorData = JSON.parse(document.getElementById('data-editor').value);
-                localStorage.setItem('misQuizData', JSON.stringify(editorData, null, 2));
-                questionData = editorData; 
-                document.getElementById('save-status').textContent = '성공적으로 저장되었습니다!';
-                setTimeout(() => { document.getElementById('save-status').textContent = ''; }, 3000);
-            } catch (e) {
-                alert('JSON 형식이 올바르지 않습니다. 저장에 실패했습니다.');
-            }
-        }
-        function downloadData() {
-            const dataStr = JSON.stringify(questionData, null, 2);
-            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-            const exportFileDefaultName = 'mis_quiz_data.json';
-            const linkElement = document.createElement('a');
-            linkElement.setAttribute('href', dataUri);
-            linkElement.setAttribute('download', exportFileDefaultName);
-            linkElement.click();
-        }
-        function uploadData(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const content = e.target.result;
-                    JSON.parse(content);
-                    document.getElementById('data-editor').value = content;
-                    saveData();
-                    alert('데이터 복원이 완료되었습니다. 앱이 새로고침됩니다.');
-                    location.reload();
-                } catch (err) {
-                    alert('파일을 읽는 데 실패했습니다. 올바른 JSON 파일인지 확인하세요.');
-                }
-            };
-            reader.readAsText(file);
-            event.target.value = '';
-        }
-    }
-
-    function setupApiKeyModal() {
+        const dataEditor = document.getElementById('data-editor');
+        const quizTitle = document.getElementById('quiz-title');
+        const gradeButton = document.getElementById('grade-button');
+        const resultsSummary = document.getElementById('results-summary');
         const modalLayer = document.getElementById('modal-layer');
         const apiKeyModal = document.getElementById('api-key-modal');
         const apiKeyInput = document.getElementById('api-key-input');
         const apiKeyError = document.getElementById('api-key-error');
-
-        document.getElementById('add-ai-questions-btn').addEventListener('click', handleAiQuestionAddition);
+    
+        function setupLearningMode() {
+            let contentHTML = '';
+            for (const chapterKey in learningContent) {
+                const chapter = learningContent[chapterKey];
+                contentHTML += `
+                    <section id="learn-${chapterKey.toLowerCase().replace(/ /g, '-')}" class="mb-12">
+                        <h2 class="text-3xl font-bold mb-6 pb-2 border-b">${chapter.title}</h2>
+                        <div>${chapter.content}</div>
+                    </section>
+                `;
+            }
+            learningContentContainer.innerHTML = contentHTML;
+            setupLearningNav();
+        }
+    
+        function setupLearningNav() {
+            const navLinks = document.querySelectorAll('.learning-nav a');
+            const sections = document.querySelectorAll('#learning-content-container section');
+    
+            if(sections.length === 0) return;
+    
+            const observer = new IntersectionObserver((entries) => {
+                let activeSectionId = null;
+                for(const entry of entries) {
+                    if (entry.isIntersecting) {
+                        activeSectionId = entry.target.id;
+                        break;
+                    }
+                }
+                
+                navLinks.forEach(link => {
+                    const linkHref = link.getAttribute('href');
+                    link.classList.toggle('active', linkHref === `#${activeSectionId}`);
+                });
+            }, { rootMargin: "-40% 0px -60% 0px", threshold: 0.1 });
+    
+            sections.forEach(section => observer.observe(section));
+        }
         
-        document.getElementById('api-key-cancel').addEventListener('click', () => {
-            modalLayer.classList.add('hidden');
-            apiKeyModal.classList.add('hidden');
-            apiKeyInput.value = '';
-            apiKeyError.classList.add('hidden');
-        });
+        function handleAiQuestionAddition() {
+            if (sessionApiKey) {
+                generateAiQuizQuestions(sessionApiKey);
+            } else {
+                modalLayer.classList.remove('hidden');
+                apiKeyModal.classList.remove('hidden');
+                apiKeyInput.focus();
+            }
+        }
+    
+        async function generateAiQuizQuestions(apiKey) {
+            if (state.selectedChapters.length === 0) return;
+    
+            addAiQuestionsBtn.disabled = true;
+            generateQuizBtn.disabled = true;
+            aiStatus.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i>AI가 선택된 챕터의 문제들을 생성 중입니다... (챕터당 1~2분 소요)`;
+    
+            let newQuestionsCount = 0;
+            let highestId = questionData.reduce((maxId, q) => Math.max(q.id, maxId), 0);
+    
+            try {
+                for (const chapterKey of state.selectedChapters) {
+                    aiStatus.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i><b>${chapterKey}</b> 챕터 문제 생성 중...`;
+                    const concepts = learningContent[chapterKey].content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+                    const prompt = `경영정보시스템의 다음 핵심 개념들을 바탕으로, 실제 기업 사례를 적용하거나 개념을 응용하는 문제 10개를 생성해줘. 문제는 기존 문제와 겹치지 않게, 그리고 객관식, 주관식, 서술형이 적절히 섞이도록 해줘.
 
-        document.getElementById('api-key-submit').addEventListener('click', () => {
-            const key = apiKeyInput.value.trim();
-            if (key) {
-                sessionApiKey = key;
+                    핵심 개념: "${concepts}"
+
+                    출력 형식은 반드시 다음 JSON 구조의 배열(array) 형태여야 해:
+                    [
+                      { "type": "객관식", "chapter": "${chapterKey}", "text": "...", "options": ["...", "...", "...", "..."], "answer": 0~4, "explanation": "..." },
+                      { "type": "주관식", "chapter": "${chapterKey}", "text": "...하는 것은 ( )이다.", "answer": ["..."] },
+                      { "type": "서술형", "chapter": "Chapter 07", "text": "...", "answer": "..." }
+                    ]
+                    `;
+    
+                    let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+                    const payload = { contents: chatHistory };
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+                    
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+    
+                    if (!response.ok) {
+                        const errorBody = await response.text();
+                        throw new Error(`[${chapterKey}] API 요청 실패: ${response.status}. ${errorBody}`);
+                    }
+    
+                    const result = await response.json();
+    
+                    if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0]) {
+                        const rawText = result.candidates[0].content.parts[0].text;
+                        const cleanedText = rawText.replace(/^```json\s*|```\s*$/g, '').trim();
+                        const newQuestions = JSON.parse(cleanedText);
+    
+                        if (Array.isArray(newQuestions)) {
+                            newQuestions.forEach(q => {
+                                highestId++;
+                                q.id = highestId;
+                                q.chapter = chapterKey; // Ensure chapter is correct
+                                questionData.push(q);
+                            });
+                            newQuestionsCount += newQuestions.length;
+                        }
+                    } else {
+                        throw new Error(`[${chapterKey}] AI로부터 유효한 응답을 받지 못했습니다.`);
+                    }
+                }
+                aiStatus.innerHTML = `<span class="text-green-600 font-bold"><i class="fas fa-check-circle mr-2"></i>총 ${newQuestionsCount}개의 AI 문제가 성공적으로 추가되었습니다!</span>`;
+                createChapterCards(); // Refresh chapter cards with new counts
+            } catch (error) {
+                console.error("AI Question Generation Error:", error);
+                aiStatus.innerHTML = `<span class="text-red-600 font-bold"><i class="fas fa-exclamation-triangle mr-2"></i>문제 생성 중 오류가 발생했습니다: ${error.message}</span>`;
+            } finally {
+                addAiQuestionsBtn.disabled = false;
+                generateQuizBtn.disabled = state.selectedChapters.length === 0;
+            }
+        }
+    
+    
+        function toggleChapterSelection(chapter, cardElement) {
+            const index = state.selectedChapters.indexOf(chapter);
+            if (index > -1) {
+                state.selectedChapters.splice(index, 1);
+                cardElement.classList.remove('selected');
+            } else {
+                state.selectedChapters.push(chapter);
+                cardElement.classList.add('selected');
+            }
+            const isDisabled = state.selectedChapters.length === 0;
+            generateQuizBtn.disabled = isDisabled;
+            addAiQuestionsBtn.disabled = isDisabled;
+        }
+    
+        function createChapterCards() {
+            const chapters = [...new Set(questionData.map(q => q.chapter))].sort();
+            chapterSelectionContainer.innerHTML = '';
+            chapters.forEach((chapter) => {
+                const questionCount = questionData.filter(q => q.chapter === chapter).length;
+                const card = document.createElement('div');
+                card.className = `chapter-card p-6 rounded-lg text-slate-800 bg-white shadow-sm cursor-pointer`;
+                card.dataset.chapter = chapter;
+                card.innerHTML = `<h3 class="text-xl font-bold">${chapter.replace('Chapter 0', 'Chapter ')}</h3><p class="mt-2 text-slate-500">${questionCount} 문제</p>`;
+                card.addEventListener('click', () => toggleChapterSelection(chapter, card));
+                chapterSelectionContainer.appendChild(card);
+            });
+        }
+        
+        function startQuiz() {
+            if (state.selectedChapters.length === 0) return;
+            state.userAnswers = {};
+            const questions = questionData.filter(q => state.selectedChapters.includes(q.chapter));
+            state.currentQuizQuestions = questions.sort(() => Math.random() - 0.5);
+            const chapterNames = state.selectedChapters.map(c => c.replace('Chapter 0', '')).sort().join(', ');
+            quizTitle.textContent = `Chapter ${chapterNames} 종합 테스트`;
+            renderQuizQuestions();
+            showView('quiz');
+        }
+    
+        function renderQuizQuestions() {
+            if (!document.getElementById('quiz-container')) {
+                 document.getElementById('quiz-view').innerHTML = `
+                    <div class="container mx-auto p-4 sm:px-6 lg:p-8">
+                        <header class="flex justify-between items-center mb-6 pb-4 border-b border-slate-300">
+                            <h1 id="quiz-title" class="text-3xl font-bold text-slate-900"></h1>
+                            <button id="back-to-quiz-home" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-semibold hover:bg-slate-300 transition">챕터 선택</button>
+                        </header>
+                        <div id="quiz-container" class="space-y-8"></div>
+                        <div class="mt-10 text-center">
+                            <button id="grade-button" class="px-8 py-3 bg-indigo-600 text-white rounded-lg font-bold text-lg hover:bg-indigo-700 transition shadow-lg">채점하기</button>
+                        </div>
+                    </div>`;
+                document.getElementById('back-to-quiz-home').addEventListener('click', () => showView('quiz-home'));
+                document.getElementById('grade-button').addEventListener('click', gradeQuiz);
+            }
+    
+            const quizContainer = document.getElementById('quiz-container');
+            quizContainer.innerHTML = '';
+            state.currentQuizQuestions.forEach((q, index) => {
+                const questionEl = document.createElement('div');
+                questionEl.className = 'bg-white p-6 rounded-lg shadow-sm';
+                questionEl.dataset.questionId = q.id;
+                let answerInputHTML = '';
+                if (q.type === '객관식') {
+                    const optionsHTML = q.options.map((opt, optIndex) => `
+                        <label class="mcq-option block p-3 border rounded-lg cursor-pointer hover:bg-slate-100 has-[:checked]:bg-indigo-100 has-[:checked]:border-indigo-500">
+                            <input type="radio" name="q-${q.id}" value="${optIndex}" class="sr-only">
+                            <span class="font-medium">${optIndex + 1}.</span> ${opt.replace(/\*\*/g, '')}
+                        </label>`).join('');
+                    answerInputHTML = `<div class="mt-4 space-y-2" onclick="event.target.closest('label')?.querySelector('input').click()">${optionsHTML}</div>`;
+                } else if (q.type === '주관식') {
+                    answerInputHTML = `<input type="text" name="q-${q.id}" class="mt-4 w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="정답을 입력하세요...">`;
+                } else {
+                    answerInputHTML = `<textarea name="q-${q.id}" rows="4" class="mt-4 w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="답안을 서술하세요..."></textarea>`;
+                }
+                questionEl.innerHTML = `<p class="text-sm font-bold text-indigo-600">문제 ${index + 1} (${q.type})</p><p class="mt-2 text-lg text-slate-800">${q.text.replace(/\*\*/g, '')}</p>${answerInputHTML}`;
+                quizContainer.appendChild(questionEl);
+            });
+        }
+    
+        function gradeQuiz() {
+            let score = 0;
+            let gradableCount = 0;
+            state.currentQuizQuestions.forEach(q => {
+                let userAnswer;
+                if (q.type === '객관식') {
+                    const selectedOption = document.querySelector(`input[name="q-${q.id}"]:checked`);
+                    userAnswer = selectedOption ? parseInt(selectedOption.value) : -1;
+                    state.userAnswers[q.id] = userAnswer;
+                    if (userAnswer === q.answer) score++;
+                    gradableCount++;
+                } else if (q.type === '주관식') {
+                    const input = document.querySelector(`input[name="q-${q.id}"]`);
+                    userAnswer = input.value.trim();
+                    state.userAnswers[q.id] = userAnswer;
+                    
+                    let isCorrect = false;
+                    const correctAnswers = Array.isArray(q.answer) ? q.answer.map(a => a.toLowerCase().trim()) : [q.answer.toLowerCase().trim()];
+                    if (correctAnswers.includes(userAnswer.toLowerCase())) {
+                        isCorrect = true;
+                    }
+
+                    if(isCorrect) score++;
+                    gradableCount++;
+    
+                } else {
+                    const textarea = document.querySelector(`textarea[name="q-${q.id}"]`);
+                    state.userAnswers[q.id] = textarea.value;
+                }
+            });
+            displayResults(score, gradableCount);
+        }
+        
+        function displayResults(score, gradableCount) {
+            if (!document.getElementById('results-container')) {
+                document.getElementById('results-view').innerHTML = `
+                <div class="container mx-auto p-4 sm:px-6 lg:p-8">
+                    <header class="text-center mb-10">
+                        <h1 class="text-4xl font-bold text-slate-900">채점 결과</h1>
+                        <p id="results-summary" class="mt-3 text-2xl font-semibold text-indigo-600"></p>
+                    </header>
+                    <div id="results-container" class="space-y-6"></div>
+                    <div class="mt-10 text-center">
+                         <button id="restart-quiz" class="px-6 py-3 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition">다시 풀기</button>
+                         <button id="go-to-quiz-home" class="ml-4 px-6 py-3 bg-slate-200 text-slate-700 rounded-lg font-bold hover:bg-slate-300 transition">챕터 선택</button>
+                    </div>
+                </div>`;
+                document.getElementById('restart-quiz').addEventListener('click', startQuiz);
+                document.getElementById('go-to-quiz-home').addEventListener('click', () => showView('quiz-home'));
+            }
+            
+            document.getElementById('results-summary').textContent = gradableCount > 0 ? `자동 채점 문제 ${gradableCount}개 중 ${score}개 정답!` : '채점할 문제가 없습니다.';
+            const resultsContainer = document.getElementById('results-container');
+            resultsContainer.innerHTML = '';
+    
+            state.currentQuizQuestions.forEach((q, index) => {
+                const userAnswer = state.userAnswers[q.id];
+                let resultClass = 'manual', feedbackHTML = '', resultIcon = `<span class="text-amber-500 font-bold">확인</span>`;
+                if (q.type === '객관식') {
+                    const isCorrect = userAnswer === q.answer;
+                    resultClass = isCorrect ? 'correct' : 'incorrect';
+                    resultIcon = isCorrect ? `<span class="text-green-500 font-bold">정답</span>` : `<span class="text-red-500 font-bold">오답</span>`;
+                    feedbackHTML = `<p class="text-sm mt-2"><span class="font-semibold">제출 답안:</span> ${userAnswer === -1 ? '미선택' : (userAnswer + 1) + '. ' + q.options[userAnswer]}</p><p class="text-sm"><span class="font-semibold">정답:</span> ${q.answer + 1}. ${q.options[q.answer]}</p>${q.explanation && !isCorrect ? `<p class="text-sm text-slate-500 mt-1"><b>해설:</b> ${q.explanation}</p>` : ''}`;
+                } else if (q.type === '주관식') {
+                    let isCorrect = false;
+                    const correctAnswerText = Array.isArray(q.answer) ? q.answer.join(' 또는 ') : q.answer;
+                    if (Array.isArray(q.answer)) {
+                        if(q.answer.map(a => a.toLowerCase().trim()).includes(userAnswer.toLowerCase())) isCorrect = true;
+                    } else {
+                        if(userAnswer.toLowerCase() === q.answer.toLowerCase().trim()) isCorrect = true;
+                    }
+                    resultClass = isCorrect ? 'correct' : 'incorrect';
+                    resultIcon = isCorrect ? `<span class="text-green-500 font-bold">정답</span>` : `<span class="text-red-500 font-bold">오답</span>`;
+                    feedbackHTML = `<p class="text-sm mt-2"><span class="font-semibold">제출 답안:</span> ${userAnswer || '미입력'}</p><p class="text-sm"><span class="font-semibold">정답:</span> ${correctAnswerText}</p>`;
+                } else {
+                     feedbackHTML = `<div class="mt-2 grid grid-cols-1 md:grid-cols-2 gap-4"><div><h4 class="font-semibold text-sm text-slate-600 mb-1">제출 답안</h4><p class="text-sm p-3 bg-slate-100 rounded-lg min-h-[60px]">${userAnswer || '미입력'}</p></div><div><h4 class="font-semibold text-sm text-slate-600 mb-1">모범 답안</h4><div class="text-sm p-3 bg-green-50 rounded-lg min-h-[60px]">${q.answer.replace(/\n/g, '<br>')}</div></div></div>`;
+                }
+                const resultEl = document.createElement('div');
+                resultEl.className = `result-card bg-white p-4 rounded-lg shadow-sm border-l-4 ${resultClass}`;
+                resultEl.innerHTML = `<div class="flex justify-between items-center"><p class="font-bold text-slate-700">문제 ${index + 1}. (${q.type})</p>${resultIcon}</div><p class="mt-2 text-slate-800">${q.text.replace(/\*\*/g, '')}</p><div class="mt-3 border-t pt-3">${feedbackHTML}</div>`;
+                resultsContainer.appendChild(resultEl);
+            });
+            showView('results');
+        }
+    
+        function loadData() {
+            try {
+                const savedData = localStorage.getItem('misQuizData');
+                questionData = savedData ? JSON.parse(savedData) : initialQuestionData;
+            } catch (e) {
+                console.error("Error loading data from localStorage:", e);
+                questionData = initialQuestionData;
+            }
+        }
+        
+        function setupAdminMode() {
+            if (!document.getElementById('data-editor')) {
+                 document.getElementById('admin-view').innerHTML = `
+                 <div class="container mx-auto p-4 sm:px-6 lg:p-8">
+                    <header class="text-center mb-8">
+                        <h1 class="text-4xl font-bold text-slate-900">관리자 모드</h1>
+                        <p class="mt-3 text-lg text-slate-600">문제 데이터를 직접 수정, 추가, 백업할 수 있습니다.</p>
+                    </header>
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h2 class="text-xl font-bold mb-2">문제 데이터 (JSON 형식)</h2>
+                        <p class="text-sm text-slate-500 mb-4">아래 텍스트를 직접 수정하여 문제를 변경할 수 있습니다. 새로운 문제를 추가하려면 기존 문제의 형식을 복사하여 붙여넣고 내용을 수정하세요.</p>
+                        <textarea id="data-editor" class="w-full h-96 p-3 border border-slate-300 rounded-md font-mono text-sm"></textarea>
+                        <div class="flex flex-wrap gap-4 mt-4">
+                            <button id="save-data-btn" class="px-6 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition">저장하기</button>
+                            <button id="download-data-btn" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition">데이터 백업</button>
+                            <button onclick="document.getElementById('upload-data-input').click()" class="px-6 py-2 bg-orange-500 text-white rounded-lg font-bold hover:bg-orange-600 transition">데이터 복원</button>
+                            <input type="file" id="upload-data-input" class="hidden" accept=".json">
+                            <button id="exit-admin-btn" class="px-6 py-2 bg-slate-500 text-white rounded-lg font-bold hover:bg-slate-600 transition">나가기</button>
+                        </div>
+                        <p id="save-status" class="mt-4 text-green-600 font-semibold"></p>
+                    </div>
+                 </div>`;
+                document.getElementById('save-data-btn').addEventListener('click', saveData);
+                document.getElementById('exit-admin-btn').addEventListener('click', () => showView('main'));
+                document.getElementById('download-data-btn').addEventListener('click', downloadData);
+                document.getElementById('upload-data-input').addEventListener('change', uploadData);
+            }
+    
+            const passwordModal = document.getElementById('password-modal');
+            const passwordInput = document.getElementById('password-input');
+            const passwordError = document.getElementById('password-error');
+            
+            document.getElementById('admin-mode-btn').addEventListener('click', () => {
+                passwordModal.classList.remove('hidden');
+                apiKeyModal.classList.add('hidden');
+                modalLayer.classList.remove('hidden');
+                passwordInput.focus();
+            });
+        
+            document.getElementById('password-cancel').addEventListener('click', () => {
+                modalLayer.classList.add('hidden');
+                passwordInput.value = '';
+                passwordError.classList.add('hidden');
+            });
+        
+            document.getElementById('password-submit').addEventListener('click', () => {
+                if (passwordInput.value === ADMIN_PASSWORD) {
+                    modalLayer.classList.add('hidden');
+                    passwordInput.value = '';
+                    passwordError.classList.add('hidden');
+                    document.getElementById('data-editor').value = JSON.stringify(questionData, null, 2);
+                    showView('admin');
+                } else {
+                    passwordError.classList.remove('hidden');
+                }
+            });
+    
+            function saveData() {
+                 try {
+                    const editorData = JSON.parse(document.getElementById('data-editor').value);
+                    localStorage.setItem('misQuizData', JSON.stringify(editorData, null, 2));
+                    questionData = editorData; 
+                    document.getElementById('save-status').textContent = '성공적으로 저장되었습니다!';
+                    setTimeout(() => { document.getElementById('save-status').textContent = ''; }, 3000);
+                } catch (e) {
+                    alert('JSON 형식이 올바르지 않습니다. 저장에 실패했습니다.');
+                }
+            }
+            function downloadData() {
+                const dataStr = JSON.stringify(questionData, null, 2);
+                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                const exportFileDefaultName = 'mis_quiz_data.json';
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', exportFileDefaultName);
+                linkElement.click();
+            }
+            function uploadData(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const content = e.target.result;
+                        JSON.parse(content);
+                        document.getElementById('data-editor').value = content;
+                        saveData();
+                        alert('데이터 복원이 완료되었습니다. 앱이 새로고침됩니다.');
+                        location.reload();
+                    } catch (err) {
+                        alert('파일을 읽는 데 실패했습니다. 올바른 JSON 파일인지 확인하세요.');
+                    }
+                };
+                reader.readAsText(file);
+                event.target.value = '';
+            }
+        }
+    
+        function setupApiKeyModal() {
+            document.getElementById('add-ai-questions-btn').addEventListener('click', handleAiQuestionAddition);
+            
+            document.getElementById('api-key-cancel').addEventListener('click', () => {
                 modalLayer.classList.add('hidden');
                 apiKeyModal.classList.add('hidden');
                 apiKeyInput.value = '';
                 apiKeyError.classList.add('hidden');
-                generateAiQuizQuestions(sessionApiKey);
-            } else {
-                apiKeyError.classList.remove('hidden');
-            }
-        });
-    }
-
-    // --- Initial Setup ---
-    document.addEventListener('DOMContentLoaded', () => {
+            });
+    
+            document.getElementById('api-key-submit').addEventListener('click', () => {
+                const key = apiKeyInput.value.trim();
+                if (key) {
+                    sessionApiKey = key;
+                    modalLayer.classList.add('hidden');
+                    apiKeyModal.classList.add('hidden');
+                    apiKeyInput.value = '';
+                    apiKeyError.classList.add('hidden');
+                    generateAiQuizQuestions(sessionApiKey);
+                } else {
+                    apiKeyError.classList.remove('hidden');
+                }
+            });
+        }
+            
+        // --- Initial Setup ---
         document.getElementById('learning-mode-btn').addEventListener('click', () => showView('learning'));
         document.getElementById('quiz-mode-btn').addEventListener('click', () => {
-             state.selectedChapters = [];
+            state.selectedChapters = [];
             createChapterCards();
             document.getElementById('generate-quiz-btn').disabled = true;
-             document.getElementById('add-ai-questions-btn').disabled = true;
+            document.getElementById('add-ai-questions-btn').disabled = true;
             showView('quiz-home');
         });
     
         document.querySelectorAll('.main-home-btn').forEach(btn => btn.addEventListener('click', () => showView('main')));
+    
         document.getElementById('generate-quiz-btn').addEventListener('click', startQuiz);
+        
         document.getElementById('back-to-quiz-home').addEventListener('click', () => showView('quiz-home'));
         document.getElementById('go-to-quiz-home').addEventListener('click', () => showView('quiz-home'));
+    
         document.getElementById('grade-button').addEventListener('click', gradeQuiz);
         document.getElementById('restart-quiz').addEventListener('click', startQuiz);
         
