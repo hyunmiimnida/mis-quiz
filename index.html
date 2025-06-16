@@ -45,7 +45,7 @@
                     <div id="quiz-mode-btn" class="mode-card bg-white p-10 rounded-xl shadow-lg cursor-pointer text-left">
                         <i class="fas fa-pencil-alt text-4xl text-green-500 mb-4"></i>
                         <h2 class="text-2xl font-bold text-slate-800">문제풀이 모드</h2>
-                        <p class="mt-2 text-slate-500">AI로 문제를 대량 추가하고 실전처럼 테스트합니다.</p>
+                        <p class="mt-2 text-slate-500">AI로 1회성 문제를 생성하거나 기존 문제로 테스트합니다.</p>
                     </div>
                 </div>
                  <footer class="text-center py-4 mt-16">
@@ -89,7 +89,7 @@
                         <h1 class="text-4xl font-bold text-slate-900">맞춤형 테스트</h1>
                         <button class="main-home-btn px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-semibold hover:bg-slate-300 transition">처음으로</button>
                     </div>
-                    <p class="mt-3 text-lg text-slate-600">시험 볼 챕터를 모두 선택한 후, '문제 출제' 버튼을 누르세요.</p>
+                    <p class="mt-3 text-lg text-slate-600">시험 볼 챕터를 모두 선택한 후, 아래 버튼을 누르세요.</p>
                 </header>
                 <main id="chapter-selection" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 flex-grow">
                 </main>
@@ -109,54 +109,14 @@
 
         <!-- Quiz View -->
         <div id="quiz-view" class="view">
-            <div class="container mx-auto p-4 sm:px-6 lg:p-8">
-                <header class="flex justify-between items-center mb-6 pb-4 border-b border-slate-300">
-                    <h1 id="quiz-title" class="text-3xl font-bold text-slate-900"></h1>
-                    <button id="back-to-quiz-home" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-semibold hover:bg-slate-300 transition">챕터 선택</button>
-                </header>
-                <div id="quiz-container" class="space-y-8"></div>
-                <div class="mt-10 text-center">
-                    <button id="grade-button" class="px-8 py-3 bg-indigo-600 text-white rounded-lg font-bold text-lg hover:bg-indigo-700 transition shadow-lg">채점하기</button>
-                </div>
-            </div>
         </div>
 
         <!-- Results View -->
         <div id="results-view" class="view">
-            <div class="container mx-auto p-4 sm:px-6 lg:p-8">
-                <header class="text-center mb-10">
-                    <h1 class="text-4xl font-bold text-slate-900">채점 결과</h1>
-                    <p id="results-summary" class="mt-3 text-2xl font-semibold text-indigo-600"></p>
-                </header>
-                <div id="results-container" class="space-y-6"></div>
-                <div class="mt-10 text-center">
-                     <button id="restart-quiz" class="px-6 py-3 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition">다시 풀기</button>
-                     <button id="go-to-quiz-home" class="ml-4 px-6 py-3 bg-slate-200 text-slate-700 rounded-lg font-bold hover:bg-slate-300 transition">챕터 선택</button>
-                </div>
-            </div>
         </div>
         
         <!-- Admin View -->
         <div id="admin-view" class="view">
-             <div class="container mx-auto p-4 sm:px-6 lg:p-8">
-                <header class="text-center mb-8">
-                    <h1 class="text-4xl font-bold text-slate-900">관리자 모드</h1>
-                    <p class="mt-3 text-lg text-slate-600">문제 데이터를 직접 수정, 추가, 백업할 수 있습니다.</p>
-                </header>
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h2 class="text-xl font-bold mb-2">문제 데이터 (JSON 형식)</h2>
-                    <p class="text-sm text-slate-500 mb-4">아래 텍스트를 직접 수정하여 문제를 변경할 수 있습니다. 새로운 문제를 추가하려면 기존 문제의 형식을 복사하여 붙여넣고 내용을 수정하세요.</p>
-                    <textarea id="data-editor" class="w-full h-96 p-3 border border-slate-300 rounded-md font-mono text-sm"></textarea>
-                    <div class="flex flex-wrap gap-4 mt-4">
-                        <button id="save-data-btn" class="px-6 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition">저장하기</button>
-                        <button id="download-data-btn" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition">데이터 백업</button>
-                        <button onclick="document.getElementById('upload-data-input').click()" class="px-6 py-2 bg-orange-500 text-white rounded-lg font-bold hover:bg-orange-600 transition">데이터 복원</button>
-                        <input type="file" id="upload-data-input" class="hidden" accept=".json">
-                        <button id="exit-admin-btn" class="px-6 py-2 bg-slate-500 text-white rounded-lg font-bold hover:bg-slate-600 transition">나가기</button>
-                    </div>
-                    <p id="save-status" class="mt-4 text-green-600 font-semibold"></p>
-                </div>
-             </div>
         </div>
     </div>
     
@@ -405,7 +365,8 @@
         currentView: 'main',
         selectedChapters: [],
         currentQuizQuestions: [],
-        userAnswers: {}
+        userAnswers: {},
+        isAiQuiz: false
     };
 
     function showView(viewId) {
@@ -430,12 +391,7 @@
         const generateQuizBtn = document.getElementById('generate-quiz-btn');
         const addAiQuestionsBtn = document.getElementById('add-ai-questions-btn');
         const aiStatus = document.getElementById('ai-status');
-        const quizContainer = document.getElementById('quiz-container');
-        const resultsContainer = document.getElementById('results-container');
         const dataEditor = document.getElementById('data-editor');
-        const quizTitle = document.getElementById('quiz-title');
-        const gradeButton = document.getElementById('grade-button');
-        const resultsSummary = document.getElementById('results-summary');
         const modalLayer = document.getElementById('modal-layer');
         const apiKeyModal = document.getElementById('api-key-modal');
         const apiKeyInput = document.getElementById('api-key-input');
@@ -479,7 +435,32 @@
     
             sections.forEach(section => observer.observe(section));
         }
-        
+    
+        async function callGeminiAPI(apiKey, prompt) {
+            let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+            const payload = { contents: chatHistory };
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+            
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorBody = await response.text();
+                throw new Error(`API 요청 실패: ${response.status}. ${errorBody}`);
+            }
+            const result = await response.json();
+
+            if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0]) {
+                const rawText = result.candidates[0].content.parts[0].text;
+                return rawText.replace(/^```json\s*|```\s*$/g, '').trim();
+            } else {
+                 throw new Error("AI로부터 유효한 응답을 받지 못했습니다.");
+            }
+        }
+    
         async function generateAiQuizQuestions(apiKey) {
             if (state.selectedChapters.length === 0) return;
     
@@ -488,14 +469,13 @@
             aiStatus.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i>AI가 선택된 챕터의 문제들을 생성 중입니다...`;
     
             let tempAiQuestions = [];
-            let lastId = questionData.reduce((maxId, q) => Math.max(q.id, maxId), 0);
-
+            let errorOccurred = false;
+    
             try {
                 for (const chapterKey of state.selectedChapters) {
-                    aiStatus.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i><b>${chapterKey}</b> 챕터 문제 생성 중... (총 ${state.selectedChapters.length}개 챕터 중 ${state.selectedChapters.indexOf(chapterKey) + 1}번째)`;
-                    
+                    aiStatus.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i><b>${chapterKey}</b> 챕터 문제 생성 중... (${state.selectedChapters.indexOf(chapterKey) + 1}/${state.selectedChapters.length})`;
                     const concepts = learningContent[chapterKey].content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-                    const prompt = `경영정보시스템의 다음 핵심 개념들을 바탕으로, 실제 기업 사례를 적용하거나 개념을 응용하는 문제 10개를 생성해줘. 문제는 기존 문제와 겹치지 않게, 그리고 객관식, 주관식, 서술형이 적절히 섞이도록 해줘. 주관식 문제의 정답은 여러가지 표현이 가능하도록 배열(array) 형태로 제공해줘. (예: ["ERP", "전사적자원관리"])
+                    const prompt = `경영정보시스템의 다음 핵심 개념들을 바탕으로, 실제 기업 사례를 적용하거나 개념을 응용하는 1회성 테스트용 문제 10개를 생성해줘. 문제는 기존 문제와 겹치지 않게, 그리고 객관식, 주관식, 서술형이 적절히 섞이도록 해줘. 주관식 문제의 정답은 여러가지 표현이 가능하도록 배열(array) 형태로 제공해줘. (예: ["ERP", "전사적자원관리"])
 
                     핵심 개념: "${concepts}"
 
@@ -506,50 +486,30 @@
                       { "type": "서술형", "text": "...", "answer": "..." }
                     ]
                     `;
-    
-                    let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-                    const payload = { contents: chatHistory };
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                     
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-    
-                    if (!response.ok) {
-                        const errorBody = await response.text();
-                        throw new Error(`[${chapterKey}] API 요청 실패: ${response.status}. ${errorBody}`);
-                    }
-    
-                    const result = await response.json();
-    
-                    if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts[0]) {
-                        const rawText = result.candidates[0].content.parts[0].text;
-                        const cleanedText = rawText.replace(/^```json\s*|```\s*$/g, '').trim();
-                        const newQuestions = JSON.parse(cleanedText);
-    
-                        if (Array.isArray(newQuestions)) {
-                            newQuestions.forEach(q => {
-                                lastId++;
-                                q.id = lastId;
-                                q.chapter = chapterKey;
-                                tempAiQuestions.push(q);
-                            });
-                        }
-                    } else {
-                        throw new Error(`[${chapterKey}] AI로부터 유효한 응답을 받지 못했습니다.`);
+                    const cleanedText = await callGeminiAPI(apiKey, prompt);
+                    const newQuestions = JSON.parse(cleanedText);
+
+                    if (Array.isArray(newQuestions)) {
+                        newQuestions.forEach((q, i) => {
+                            q.id = `ai-${chapterKey}-${i}`; // Unique ID for temp questions
+                            q.chapter = chapterKey;
+                            tempAiQuestions.push(q);
+                        });
                     }
                 }
-                aiStatus.innerHTML = `<span class="text-green-600 font-bold"><i class="fas fa-check-circle mr-2"></i>총 ${tempAiQuestions.length}개의 AI 문제가 생성되었습니다! '문제 출제' 버튼을 눌러주세요.</span>`;
+                
                 state.currentQuizQuestions = tempAiQuestions.sort(() => Math.random() - 0.5);
-                startQuiz(true); // true 플래그로 AI 퀴즈임을 알림
+                startQuiz(true); 
+
             } catch (error) {
+                errorOccurred = true;
                 console.error("AI Question Generation Error:", error);
                 aiStatus.innerHTML = `<span class="text-red-600 font-bold"><i class="fas fa-exclamation-triangle mr-2"></i>문제 생성 중 오류가 발생했습니다.</span>`;
             } finally {
                 addAiQuestionsBtn.disabled = state.selectedChapters.length === 0;
                 generateQuizBtn.disabled = state.selectedChapters.length === 0;
+                if (!errorOccurred) aiStatus.innerHTML = '';
             }
         }
     
@@ -569,7 +529,7 @@
         }
     
         function createChapterCards() {
-            const chapters = [...new Set(questionData.map(q => q.chapter))].sort();
+            const chapters = [...new Set(initialQuestionData.map(q => q.chapter))].sort();
             chapterSelectionContainer.innerHTML = '';
             chapters.forEach((chapter) => {
                 const questionCount = questionData.filter(q => q.chapter === chapter).length;
@@ -584,37 +544,36 @@
         
         function startQuiz(isAiQuiz = false) {
             if (!isAiQuiz && state.selectedChapters.length === 0) return;
-            
+            state.isAiQuiz = isAiQuiz;
             state.userAnswers = {};
+            
             if (!isAiQuiz) {
                 const questions = questionData.filter(q => state.selectedChapters.includes(q.chapter));
                 state.currentQuizQuestions = questions.sort(() => Math.random() - 0.5);
             }
             
             const chapterNames = state.selectedChapters.map(c => c.replace('Chapter 0', '')).sort().join(', ');
-            quizTitle.textContent = `${isAiQuiz ? 'AI 생성 ' : ''}Chapter ${chapterNames} 테스트`;
+            document.getElementById('quiz-title').textContent = `${isAiQuiz ? 'AI 생성 ' : ''}Chapter ${chapterNames} 테스트`;
             renderQuizQuestions();
             showView('quiz');
         }
     
         function renderQuizQuestions() {
-            // Lazy-load quiz view HTML
-            if (!document.getElementById('quiz-container')) {
-                 document.getElementById('quiz-view').innerHTML = `
-                    <div class="container mx-auto p-4 sm:px-6 lg:p-8">
-                        <header class="flex justify-between items-center mb-6 pb-4 border-b border-slate-300">
-                            <h1 id="quiz-title" class="text-3xl font-bold text-slate-900"></h1>
-                            <button id="back-to-quiz-home" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-semibold hover:bg-slate-300 transition">챕터 선택</button>
-                        </header>
-                        <div id="quiz-container" class="space-y-8"></div>
-                        <div class="mt-10 text-center">
-                            <button id="grade-button" class="px-8 py-3 bg-indigo-600 text-white rounded-lg font-bold text-lg hover:bg-indigo-700 transition shadow-lg">채점하기</button>
-                        </div>
-                    </div>`;
-                document.getElementById('back-to-quiz-home').addEventListener('click', () => showView('quiz-home'));
-                document.getElementById('grade-button').addEventListener('click', gradeQuiz);
-            }
-    
+            const quizView = document.getElementById('quiz-view');
+            quizView.innerHTML = `
+                <div class="container mx-auto p-4 sm:px-6 lg:p-8">
+                    <header class="flex justify-between items-center mb-6 pb-4 border-b border-slate-300">
+                        <h1 id="quiz-title" class="text-3xl font-bold text-slate-900">${state.isAiQuiz ? 'AI 생성 ' : ''}Chapter ${state.selectedChapters.map(c => c.replace('Chapter 0', '')).sort().join(', ')} 테스트</h1>
+                        <button id="back-to-quiz-home" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-semibold hover:bg-slate-300 transition">챕터 선택</button>
+                    </header>
+                    <div id="quiz-container" class="space-y-8"></div>
+                    <div class="mt-10 text-center">
+                        <button id="grade-button" class="px-8 py-3 bg-indigo-600 text-white rounded-lg font-bold text-lg hover:bg-indigo-700 transition shadow-lg">채점하기</button>
+                    </div>
+                </div>`;
+            document.getElementById('back-to-quiz-home').addEventListener('click', () => showView('quiz-home'));
+            document.getElementById('grade-button').addEventListener('click', gradeQuiz);
+
             const quizContainer = document.getElementById('quiz-container');
             quizContainer.innerHTML = '';
             state.currentQuizQuestions.forEach((q, index) => {
@@ -656,7 +615,7 @@
                     state.userAnswers[q.id] = userAnswer;
                     
                     let isCorrect = false;
-                    const correctAnswers = Array.isArray(q.answer) ? q.answer.map(a => a.toLowerCase().trim()) : [q.answer.toLowerCase().trim()];
+                    const correctAnswers = Array.isArray(q.answer) ? q.answer.map(a => a.toLowerCase().trim()) : [String(q.answer).toLowerCase().trim()];
                     if (correctAnswers.includes(userAnswer.toLowerCase())) {
                         isCorrect = true;
                     }
@@ -672,8 +631,8 @@
         }
         
         function displayResults(score, gradableCount) {
-            if (!document.getElementById('results-container')) {
-                document.getElementById('results-view').innerHTML = `
+            const resultsView = document.getElementById('results-view');
+            resultsView.innerHTML = `
                 <div class="container mx-auto p-4 sm:px-6 lg:p-8">
                     <header class="text-center mb-10">
                         <h1 class="text-4xl font-bold text-slate-900">채점 결과</h1>
@@ -685,10 +644,9 @@
                          <button id="go-to-quiz-home" class="ml-4 px-6 py-3 bg-slate-200 text-slate-700 rounded-lg font-bold hover:bg-slate-300 transition">챕터 선택</button>
                     </div>
                 </div>`;
-                document.getElementById('restart-quiz').addEventListener('click', () => startQuiz(true));
-                document.getElementById('go-to-quiz-home').addEventListener('click', () => showView('quiz-home'));
-            }
-            
+            document.getElementById('restart-quiz').addEventListener('click', () => startQuiz(state.isAiQuiz));
+            document.getElementById('go-to-quiz-home').addEventListener('click', () => showView('quiz-home'));
+
             document.getElementById('results-summary').textContent = gradableCount > 0 ? `자동 채점 문제 ${gradableCount}개 중 ${score}개 정답!` : '채점할 문제가 없습니다.';
             const resultsContainer = document.getElementById('results-container');
             resultsContainer.innerHTML = '';
@@ -735,7 +693,8 @@
         
         function setupAdminMode() {
             if (!document.getElementById('data-editor')) {
-                 document.getElementById('admin-view').innerHTML = `
+                const adminView = document.getElementById('admin-view');
+                 adminView.innerHTML = `
                  <div class="container mx-auto p-4 sm:px-6 lg:p-8">
                     <header class="text-center mb-8">
                         <h1 class="text-4xl font-bold text-slate-900">관리자 모드</h1>
@@ -764,7 +723,8 @@
             const passwordModal = document.getElementById('password-modal');
             const passwordInput = document.getElementById('password-input');
             const passwordError = document.getElementById('password-error');
-            
+            const apiKeyModal = document.getElementById('api-key-modal');
+
             document.getElementById('admin-mode-btn').addEventListener('click', () => {
                 modalLayer.classList.remove('hidden');
                 passwordModal.classList.remove('hidden');
@@ -832,7 +792,7 @@
         }
     
         function setupApiKeyModal() {
-            document.getElementById('add-ai-questions-btn').addEventListener('click', handleAiQuestionAddition);
+            addAiQuestionsBtn.addEventListener('click', () => handleAiQuestionAddition(generateAiQuizQuestions));
             
             document.getElementById('api-key-cancel').addEventListener('click', () => {
                 modalLayer.classList.add('hidden');
@@ -849,11 +809,26 @@
                     apiKeyModal.classList.add('hidden');
                     apiKeyInput.value = '';
                     apiKeyError.classList.add('hidden');
-                    generateAiQuizQuestions(sessionApiKey);
+                    if(state.apiKeyCallback) {
+                        state.apiKeyCallback(sessionApiKey);
+                        state.apiKeyCallback = null;
+                    }
                 } else {
                     apiKeyError.classList.remove('hidden');
                 }
             });
+        }
+
+        function handleAiQuestionAddition(generatorFn) {
+            if (sessionApiKey) {
+                generatorFn(sessionApiKey);
+            } else {
+                state.apiKeyCallback = () => generatorFn(sessionApiKey);
+                modalLayer.classList.remove('hidden');
+                document.getElementById('password-modal').classList.add('hidden');
+                apiKeyModal.classList.remove('hidden');
+                apiKeyInput.focus();
+            }
         }
             
         // --- Initial Setup ---
@@ -861,14 +836,15 @@
         document.getElementById('quiz-mode-btn').addEventListener('click', () => {
              state.selectedChapters = [];
             createChapterCards();
-            document.getElementById('generate-quiz-btn').disabled = true;
-             document.getElementById('add-ai-questions-btn').disabled = true;
+            generateQuizBtn.disabled = true;
+            addAiQuestionsBtn.disabled = true;
+            aiStatus.textContent = '';
             showView('quiz-home');
         });
     
         document.querySelectorAll('.main-home-btn').forEach(btn => btn.addEventListener('click', () => showView('main')));
     
-        document.getElementById('generate-quiz-btn').addEventListener('click', () => startQuiz(false));
+        generateQuizBtn.addEventListener('click', () => startQuiz(false));
         
         document.getElementById('back-to-quiz-home').addEventListener('click', () => showView('quiz-home'));
         document.getElementById('go-to-quiz-home').addEventListener('click', () => showView('quiz-home'));
