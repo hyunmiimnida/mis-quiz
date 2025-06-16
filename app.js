@@ -10,26 +10,16 @@ const state = {
     userAnswers: {}
 };
 
-const views = {
-    main: document.getElementById('main-view'),
-    learning: document.getElementById('learning-view'),
-    quizHome: document.getElementById('quiz-home-view'),
-    quiz: document.getElementById('quiz-view'),
-    results: document.getElementById('results-view'),
-    admin: document.getElementById('admin-view')
-};
-
-const learningContentContainer = document.getElementById('learning-content-container');
-const chapterSelectionContainer = document.getElementById('chapter-selection');
-const generateQuizBtn = document.getElementById('generate-quiz-btn');
-const quizContainer = document.getElementById('quiz-container');
-const resultsContainer = document.getElementById('results-container');
-const dataEditor = document.getElementById('data-editor');
-const quizTitle = document.getElementById('quiz-title');
-const gradeButton = document.getElementById('grade-button');
-const resultsSummary = document.getElementById('results-summary');
-
+// Global function definitions
 function showView(viewId) {
+    const views = {
+        main: document.getElementById('main-view'),
+        learning: document.getElementById('learning-view'),
+        quizHome: document.getElementById('quiz-home-view'),
+        quiz: document.getElementById('quiz-view'),
+        results: document.getElementById('results-view'),
+        admin: document.getElementById('admin-view')
+    };
     Object.values(views).forEach(v => {
         if(v) v.classList.remove('active');
     });
@@ -41,6 +31,7 @@ function showView(viewId) {
 }
 
 function setupLearningMode() {
+    const learningContentContainer = document.getElementById('learning-content-container');
     let contentHTML = '';
     for (const chapterKey in learningContent) {
         const chapter = learningContent[chapterKey];
@@ -154,10 +145,11 @@ function toggleChapterSelection(chapter, cardElement) {
         state.selectedChapters.push(chapter);
         cardElement.classList.add('selected');
     }
-    generateQuizBtn.disabled = state.selectedChapters.length === 0;
+    document.getElementById('generate-quiz-btn').disabled = state.selectedChapters.length === 0;
 }
 
 function createChapterCards() {
+    const chapterSelectionContainer = document.getElementById('chapter-selection');
     const chapters = [...new Set(questionData.map(q => q.chapter))].sort();
     chapterSelectionContainer.innerHTML = '';
     chapters.forEach((chapter) => {
@@ -177,12 +169,13 @@ function startQuiz() {
     const questions = questionData.filter(q => state.selectedChapters.includes(q.chapter));
     state.currentQuizQuestions = questions.sort(() => Math.random() - 0.5);
     const chapterNames = state.selectedChapters.map(c => c.replace('Chapter 0', '')).sort().join(', ');
-    quizTitle.textContent = `Chapter ${chapterNames} 종합 테스트`;
+    document.getElementById('quiz-title').textContent = `Chapter ${chapterNames} 종합 테스트`;
     renderQuizQuestions();
     showView('quiz');
 }
 
 function renderQuizQuestions() {
+    const quizContainer = document.getElementById('quiz-container');
     quizContainer.innerHTML = '';
     state.currentQuizQuestions.forEach((q, index) => {
         const questionEl = document.createElement('div');
@@ -233,7 +226,8 @@ function gradeQuiz() {
 }
 
 function displayResults(score, gradableCount) {
-    resultsSummary.textContent = gradableCount > 0 ? `자동 채점 문제 ${gradableCount}개 중 ${score}개 정답!` : '채점할 문제가 없습니다.';
+    document.getElementById('results-summary').textContent = gradableCount > 0 ? `자동 채점 문제 ${gradableCount}개 중 ${score}개 정답!` : '채점할 문제가 없습니다.';
+    const resultsContainer = document.getElementById('results-container');
     resultsContainer.innerHTML = '';
     state.currentQuizQuestions.forEach((q, index) => {
         const userAnswer = state.userAnswers[q.id];
@@ -274,6 +268,7 @@ function setupAdminMode() {
     const passwordInput = document.getElementById('password-input');
     const passwordError = document.getElementById('password-error');
     const saveDataBtn = document.getElementById('save-data-btn');
+    const dataEditor = document.getElementById('data-editor');
 
     document.getElementById('admin-mode-btn').addEventListener('click', () => {
         passwordModal.classList.remove('hidden');
@@ -348,7 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Mode Selection Buttons
     document.getElementById('learning-mode-btn').addEventListener('click', () => showView('learning'));
     document.getElementById('quiz-mode-btn').addEventListener('click', () => {
-         state.selectedChapters = [];
+        state.selectedChapters = [];
         createChapterCards();
         document.getElementById('generate-quiz-btn').disabled = true;
         showView('quiz-home');
