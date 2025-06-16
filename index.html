@@ -40,7 +40,7 @@
                     <div id="learning-mode-btn" class="mode-card bg-white p-10 rounded-xl shadow-lg cursor-pointer text-left">
                         <i class="fas fa-book-open text-4xl text-blue-500 mb-4"></i>
                         <h2 class="text-2xl font-bold text-slate-800">학습 모드</h2>
-                        <p class="mt-2 text-slate-500">핵심 개념을 체계적으로 학습하고 AI 문제를 생성합니다.</p>
+                        <p class="mt-2 text-slate-500">핵심 개념을 체계적으로 학습하고 AI 응용문제를 생성합니다.</p>
                     </div>
                     <div id="quiz-mode-btn" class="mode-card bg-white p-10 rounded-xl shadow-lg cursor-pointer text-left">
                         <i class="fas fa-pencil-alt text-4xl text-green-500 mb-4"></i>
@@ -97,10 +97,10 @@
                     <div id="ai-status" class="mb-4 text-slate-600 h-6"></div>
                     <div class="flex justify-center items-center gap-4">
                         <button id="add-ai-questions-btn" class="px-8 py-4 bg-blue-600 text-white rounded-lg font-bold text-xl hover:bg-blue-700 transition shadow-lg disabled:bg-blue-300" disabled>
-                            <i class="fas fa-magic-wand-sparkles mr-2"></i>AI로 문제 추가 (10개)
+                            <i class="fas fa-magic-wand-sparkles mr-2"></i>AI로 1회성 문제풀기
                         </button>
                         <button id="generate-quiz-btn" class="px-10 py-4 bg-indigo-600 text-white rounded-lg font-bold text-xl hover:bg-indigo-700 transition shadow-lg disabled:bg-indigo-300" disabled>
-                            문제 출제
+                            기존 문제풀기
                         </button>
                     </div>
                 </div>
@@ -480,39 +480,30 @@
             sections.forEach(section => observer.observe(section));
         }
         
-        function handleAiQuestionAddition() {
-            if (sessionApiKey) {
-                generateAiQuizQuestions(sessionApiKey);
-            } else {
-                modalLayer.classList.remove('hidden');
-                apiKeyModal.classList.remove('hidden');
-                apiKeyInput.focus();
-            }
-        }
-    
         async function generateAiQuizQuestions(apiKey) {
             if (state.selectedChapters.length === 0) return;
     
             addAiQuestionsBtn.disabled = true;
             generateQuizBtn.disabled = true;
-            aiStatus.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i>AI가 선택된 챕터의 문제들을 생성 중입니다... (챕터당 1~2분 소요)`;
+            aiStatus.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i>AI가 선택된 챕터의 문제들을 생성 중입니다...`;
     
-            let newQuestionsCount = 0;
-            let highestId = questionData.reduce((maxId, q) => Math.max(q.id, maxId), 0);
-    
+            let tempAiQuestions = [];
+            let lastId = questionData.reduce((maxId, q) => Math.max(q.id, maxId), 0);
+
             try {
                 for (const chapterKey of state.selectedChapters) {
-                    aiStatus.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i><b>${chapterKey}</b> 챕터 문제 생성 중...`;
+                    aiStatus.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i><b>${chapterKey}</b> 챕터 문제 생성 중... (총 ${state.selectedChapters.length}개 챕터 중 ${state.selectedChapters.indexOf(chapterKey) + 1}번째)`;
+                    
                     const concepts = learningContent[chapterKey].content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-                    const prompt = `경영정보시스템의 다음 핵심 개념들을 바탕으로, 실제 기업 사례를 적용하거나 개념을 응용하는 문제 10개를 생성해줘. 문제는 기존 문제와 겹치지 않게, 그리고 객관식, 주관식, 서술형이 적절히 섞이도록 해줘.
+                    const prompt = `경영정보시스템의 다음 핵심 개념들을 바탕으로, 실제 기업 사례를 적용하거나 개념을 응용하는 문제 10개를 생성해줘. 문제는 기존 문제와 겹치지 않게, 그리고 객관식, 주관식, 서술형이 적절히 섞이도록 해줘. 주관식 문제의 정답은 여러가지 표현이 가능하도록 배열(array) 형태로 제공해줘. (예: ["ERP", "전사적자원관리"])
 
                     핵심 개념: "${concepts}"
 
                     출력 형식은 반드시 다음 JSON 구조의 배열(array) 형태여야 해:
                     [
-                      { "type": "객관식", "chapter": "${chapterKey}", "text": "...", "options": ["...", "...", "...", "..."], "answer": 0~4, "explanation": "..." },
-                      { "type": "주관식", "chapter": "${chapterKey}", "text": "...하는 것은 ( )이다.", "answer": ["..."] },
-                      { "type": "서술형", "chapter": "Chapter 07", "text": "...", "answer": "..." }
+                      { "type": "객관식", "text": "...", "options": ["...", "...", "...", "..."], "answer": 0~3, "explanation": "..." },
+                      { "type": "주관식", "text": "...하는 것은 ( )이다.", "answer": ["..."] },
+                      { "type": "서술형", "text": "...", "answer": "..." }
                     ]
                     `;
     
@@ -540,24 +531,24 @@
     
                         if (Array.isArray(newQuestions)) {
                             newQuestions.forEach(q => {
-                                highestId++;
-                                q.id = highestId;
-                                q.chapter = chapterKey; // Ensure chapter is correct
-                                questionData.push(q);
+                                lastId++;
+                                q.id = lastId;
+                                q.chapter = chapterKey;
+                                tempAiQuestions.push(q);
                             });
-                            newQuestionsCount += newQuestions.length;
                         }
                     } else {
                         throw new Error(`[${chapterKey}] AI로부터 유효한 응답을 받지 못했습니다.`);
                     }
                 }
-                aiStatus.innerHTML = `<span class="text-green-600 font-bold"><i class="fas fa-check-circle mr-2"></i>총 ${newQuestionsCount}개의 AI 문제가 성공적으로 추가되었습니다!</span>`;
-                createChapterCards(); // Refresh chapter cards with new counts
+                aiStatus.innerHTML = `<span class="text-green-600 font-bold"><i class="fas fa-check-circle mr-2"></i>총 ${tempAiQuestions.length}개의 AI 문제가 생성되었습니다! '문제 출제' 버튼을 눌러주세요.</span>`;
+                state.currentQuizQuestions = tempAiQuestions.sort(() => Math.random() - 0.5);
+                startQuiz(true); // true 플래그로 AI 퀴즈임을 알림
             } catch (error) {
                 console.error("AI Question Generation Error:", error);
-                aiStatus.innerHTML = `<span class="text-red-600 font-bold"><i class="fas fa-exclamation-triangle mr-2"></i>문제 생성 중 오류가 발생했습니다: ${error.message}</span>`;
+                aiStatus.innerHTML = `<span class="text-red-600 font-bold"><i class="fas fa-exclamation-triangle mr-2"></i>문제 생성 중 오류가 발생했습니다.</span>`;
             } finally {
-                addAiQuestionsBtn.disabled = false;
+                addAiQuestionsBtn.disabled = state.selectedChapters.length === 0;
                 generateQuizBtn.disabled = state.selectedChapters.length === 0;
             }
         }
@@ -591,18 +582,23 @@
             });
         }
         
-        function startQuiz() {
-            if (state.selectedChapters.length === 0) return;
+        function startQuiz(isAiQuiz = false) {
+            if (!isAiQuiz && state.selectedChapters.length === 0) return;
+            
             state.userAnswers = {};
-            const questions = questionData.filter(q => state.selectedChapters.includes(q.chapter));
-            state.currentQuizQuestions = questions.sort(() => Math.random() - 0.5);
+            if (!isAiQuiz) {
+                const questions = questionData.filter(q => state.selectedChapters.includes(q.chapter));
+                state.currentQuizQuestions = questions.sort(() => Math.random() - 0.5);
+            }
+            
             const chapterNames = state.selectedChapters.map(c => c.replace('Chapter 0', '')).sort().join(', ');
-            quizTitle.textContent = `Chapter ${chapterNames} 종합 테스트`;
+            quizTitle.textContent = `${isAiQuiz ? 'AI 생성 ' : ''}Chapter ${chapterNames} 테스트`;
             renderQuizQuestions();
             showView('quiz');
         }
     
         function renderQuizQuestions() {
+            // Lazy-load quiz view HTML
             if (!document.getElementById('quiz-container')) {
                  document.getElementById('quiz-view').innerHTML = `
                     <div class="container mx-auto p-4 sm:px-6 lg:p-8">
@@ -664,7 +660,6 @@
                     if (correctAnswers.includes(userAnswer.toLowerCase())) {
                         isCorrect = true;
                     }
-
                     if(isCorrect) score++;
                     gradableCount++;
     
@@ -690,7 +685,7 @@
                          <button id="go-to-quiz-home" class="ml-4 px-6 py-3 bg-slate-200 text-slate-700 rounded-lg font-bold hover:bg-slate-300 transition">챕터 선택</button>
                     </div>
                 </div>`;
-                document.getElementById('restart-quiz').addEventListener('click', startQuiz);
+                document.getElementById('restart-quiz').addEventListener('click', () => startQuiz(true));
                 document.getElementById('go-to-quiz-home').addEventListener('click', () => showView('quiz-home'));
             }
             
@@ -771,9 +766,9 @@
             const passwordError = document.getElementById('password-error');
             
             document.getElementById('admin-mode-btn').addEventListener('click', () => {
+                modalLayer.classList.remove('hidden');
                 passwordModal.classList.remove('hidden');
                 apiKeyModal.classList.add('hidden');
-                modalLayer.classList.remove('hidden');
                 passwordInput.focus();
             });
         
@@ -864,22 +859,22 @@
         // --- Initial Setup ---
         document.getElementById('learning-mode-btn').addEventListener('click', () => showView('learning'));
         document.getElementById('quiz-mode-btn').addEventListener('click', () => {
-            state.selectedChapters = [];
+             state.selectedChapters = [];
             createChapterCards();
             document.getElementById('generate-quiz-btn').disabled = true;
-            document.getElementById('add-ai-questions-btn').disabled = true;
+             document.getElementById('add-ai-questions-btn').disabled = true;
             showView('quiz-home');
         });
     
         document.querySelectorAll('.main-home-btn').forEach(btn => btn.addEventListener('click', () => showView('main')));
     
-        document.getElementById('generate-quiz-btn').addEventListener('click', startQuiz);
+        document.getElementById('generate-quiz-btn').addEventListener('click', () => startQuiz(false));
         
         document.getElementById('back-to-quiz-home').addEventListener('click', () => showView('quiz-home'));
         document.getElementById('go-to-quiz-home').addEventListener('click', () => showView('quiz-home'));
     
         document.getElementById('grade-button').addEventListener('click', gradeQuiz);
-        document.getElementById('restart-quiz').addEventListener('click', startQuiz);
+        document.getElementById('restart-quiz').addEventListener('click', () => startQuiz(state.isAiQuiz));
         
         setupAdminMode();
         setupApiKeyModal();
